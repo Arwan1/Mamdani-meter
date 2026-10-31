@@ -252,6 +252,68 @@
         }
       }
     },
+    "/api/v1/geographies/{geo_id}/insight": {
+      "get": {
+        "tags": [
+          "insights"
+        ],
+        "summary": "Get District Insight",
+        "operationId": "get_district_insight_api_v1_geographies__geo_id__insight_get",
+        "parameters": [
+          {
+            "name": "geo_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Geo Id"
+            }
+          },
+          {
+            "name": "node_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "subcategory",
+              "title": "Node Type"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "public_parks",
+              "title": "Node Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DistrictInsight"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/geographies/{geo_id}/context": {
       "get": {
         "tags": [
@@ -1271,6 +1333,148 @@
         ],
         "title": "DatasetList"
       },
+      "DistrictEvidence": {
+        "properties": {
+          "indicator_id": {
+            "type": "string",
+            "title": "Indicator Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "raw_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ScoreStatus"
+          },
+          "coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Coverage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "indicator_id",
+          "name",
+          "status",
+          "coverage"
+        ],
+        "title": "DistrictEvidence"
+      },
+      "DistrictInsight": {
+        "properties": {
+          "geo_id": {
+            "type": "string",
+            "title": "Geo Id"
+          },
+          "node_type": {
+            "type": "string",
+            "enum": [
+              "domain",
+              "subcategory",
+              "dimension",
+              "indicator"
+            ],
+            "title": "Node Type"
+          },
+          "node_id": {
+            "type": "string",
+            "title": "Node Id"
+          },
+          "data_version": {
+            "type": "string",
+            "title": "Data Version"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "priority_indicator_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Priority Indicator Ids"
+          },
+          "related_policy_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Related Policy Ids"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/DistrictEvidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "caveat": {
+            "type": "string",
+            "title": "Caveat"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "geo_id",
+          "node_type",
+          "node_id",
+          "data_version",
+          "headline",
+          "explanation",
+          "evidence",
+          "caveat",
+          "generated_at"
+        ],
+        "title": "DistrictInsight",
+        "description": "A cached, source-constrained interpretation read by the UI."
+      },
       "Geography": {
         "properties": {
           "geo_id": {
@@ -1897,6 +2101,17 @@
               }
             ],
             "title": "Reason"
+          },
+          "reference_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Period"
           }
         },
         "type": "object",
@@ -2020,6 +2235,14 @@
           },
           "safety_flags": {
             "$ref": "#/components/schemas/SafetyFlags"
+          },
+          "related_policy_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Related Policy Ids"
           },
           "policy_note": {
             "anyOf": [

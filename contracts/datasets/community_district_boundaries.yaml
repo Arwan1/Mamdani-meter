@@ -1,0 +1,7 @@
+slug: community_district_boundaries
+name: NYC Community Districts
+publisher: New York City Department of City Planning
+url: https://data.cityofnewyork.us/City-Government/Community-Districts/5crt-au7u
+format: GeoJSON via Socrata API
+access_method: nycp_data_sync
+limitations: "The local snapshot retains the 59 standard community districts and excludes joint-interest areas. Refresh the local data to obtain a newer boundary release."

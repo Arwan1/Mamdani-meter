@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     )
     storage_dir: Path = PROJECT_ROOT / "data"
     database_path: Path = PROJECT_ROOT / "data" / "nyc_civic.sqlite3"
-    allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:4173,http://127.0.0.1:4173"
     min_coverage: float = 0.6
     max_upload_bytes: int = 10 * 1024 * 1024
 
@@ -46,7 +46,8 @@ class Settings(BaseSettings):
 
     @property
     def origins(self) -> list[str]:
-        return [origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()]
+        configured = {origin.strip() for origin in self.allowed_origins.split(",") if origin.strip()}
+        return sorted(configured | {"http://localhost:4173", "http://127.0.0.1:4173"})
 
 
 @lru_cache

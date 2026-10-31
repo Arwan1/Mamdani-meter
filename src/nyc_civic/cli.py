@@ -10,19 +10,22 @@ from nyc_civic.api import create_app
 from nyc_civic.config import PROJECT_ROOT, get_settings
 from nyc_civic.db import Database
 from nyc_civic.gemini import GeminiService
+from nyc_civic.insights import generate_district_insight
 from nyc_civic.policy import extract_document, ingest_document
-from nyc_civic.seed import seed_demo
+from nyc_civic.real_data import sync_parks_data
 
 
 app = typer.Typer(help="Local-first NYC Civic Priorities platform commands.", no_args_is_help=True)
 contract_app = typer.Typer(help="OpenAPI contract commands.", no_args_is_help=True)
-demo_app = typer.Typer(help="Local demo data commands.", no_args_is_help=True)
+data_app = typer.Typer(help="Official-data synchronization commands.", no_args_is_help=True)
 docs_app = typer.Typer(help="Policy document commands.", no_args_is_help=True)
 fixtures_app = typer.Typer(help="UI fixture commands.", no_args_is_help=True)
+insights_app = typer.Typer(help="Gemini district interpretation commands.", no_args_is_help=True)
 app.add_typer(contract_app, name="contract")
-app.add_typer(demo_app, name="demo")
+app.add_typer(data_app, name="data")
 app.add_typer(docs_app, name="docs")
 app.add_typer(fixtures_app, name="fixtures")
+app.add_typer(insights_app, name="insights")
 
 
 def database() -> Database:
@@ -30,15 +33,11 @@ def database() -> Database:
 
 
 @app.command()
-def init(seed: bool = typer.Option(True, help="Seed the small Parks demo data set.")) -> None:
-    """Create local directories, SQLite schema, and useful demo values."""
+def init() -> None:
+    """Create local directories and the SQLite schema without inventing records."""
     store = database()
     store.initialize()
-    if seed:
-        version = seed_demo(store)
-        typer.echo(f"Initialized local store and seeded demo data ({version}).")
-    else:
-        typer.echo("Initialized empty local store.")
+    typer.echo("Initialized empty local store. Run `nycp data sync` to load official NYC data.")
 
 
 @app.command()
@@ -67,10 +66,12 @@ def check_contract(contract: Path = typer.Option(PROJECT_ROOT / "contracts" / "o
     typer.echo("OpenAPI contract is current.")
 
 
-@demo_app.command("seed")
-def demo_seed() -> None:
-    """Replace platform demo geography/scores while preserving submissions and policy data."""
-    typer.echo(f"Seeded demo data ({seed_demo(database())}).")
+@data_app.command("sync")
+def data_sync() -> None:
+    """Fetch the official NYC Parks, DCP population, and CD-boundary sources locally."""
+    typer.echo("Downloading official NYC Open Data records…")
+    version = sync_parks_data(database(), get_settings())
+    typer.echo(f"Loaded 59 community districts and current Parks acreage data ({version}).")
 
 
 @docs_app.command("ingest")
@@ -108,6 +109,20 @@ def docs_list(approved_only: bool = typer.Option(False)) -> None:
         typer.echo(f"{row['id']}  [{row['review_status']}]  {row['summary']}")
 
 
+@docs_app.command("show")
+def docs_show(commitment_id: str) -> None:
+    """Print a proposed commitment and its source excerpt for human review."""
+    row = database().commitment(commitment_id, approved_only=False)
+    if row is None:
+        raise typer.BadParameter("Unknown commitment id")
+    typer.echo(f"Document: {row['document_title']}")
+    typer.echo(f"Page: {row['page'] or 'n/a'}")
+    typer.echo(f"Status: {row['review_status']}")
+    typer.echo(f"Summary: {row['summary']}")
+    typer.echo(f"Excerpt: {row['excerpt']}")
+    typer.echo(f"Tags: {row['tags_json']}")
+
+
 @docs_app.command("reject")
 def docs_reject(commitment_id: str) -> None:
     """Reject a reviewed commitment so it remains out of the public API."""
@@ -116,9 +131,27 @@ def docs_reject(commitment_id: str) -> None:
     typer.echo(f"Rejected commitment {commitment_id}")
 
 
+@insights_app.command("generate")
+def insights_generate(
+    node_type: str = typer.Option("indicator"),
+    node_id: str = typer.Option("public_parks.acreage_per_1000"),
+    level: str = typer.Option("cd"),
+) -> None:
+    """Generate and cache one data-constrained Gemini interpretation per configured geography."""
+    store = database()
+    geographies = store.list_geographies(level)
+    if not geographies:
+        raise typer.BadParameter(f"No geographies are loaded at level '{level}'")
+    for geography in geographies:
+        insight = generate_district_insight(
+            store, get_settings(), geography["geo_id"], node_type, node_id
+        )
+        typer.echo(f"{insight.geo_id}: {insight.headline}")
+
+
 @fixtures_app.command("export")
 def export_fixtures(output_dir: Path = typer.Option(PROJECT_ROOT / "contracts" / "fixtures")) -> None:
-    """Export a compact, current Parks-demo fixture set for the UI owner."""
+    """Export compact current API fixtures after an official-data synchronization."""
     from fastapi.testclient import TestClient
 
     output_dir.mkdir(parents=True, exist_ok=True)

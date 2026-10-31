@@ -1,0 +1,7 @@
+slug: nyc_population_by_cd_2010
+name: NYC Population by Community Districts — 2010
+publisher: NYC Department of City Planning
+url: https://data.cityofnewyork.us/City-Government/New-York-City-Population-By-Community-Districts/xi7c-iiu2
+format: JSON via Socrata API
+access_method: nycp_data_sync
+limitations: "The source provides 2010 population, not a current population estimate. It is used only as the denominator for the currently available acreage-per-resident measure."

@@ -7,11 +7,11 @@ direction: higher_better
 unit: acres_per_1000_residents
 formula: "public park acres / population * 1000"
 geo_unit: cd
-datasets: [parks_properties, census_pl_2020]
-reference_period: "demo 2026"
+datasets: [parks_properties, nyc_population_by_cd_2010]
+reference_period: "NYC Parks Properties at local retrieval; DCP 2010 population"
 normalization:
   method: benchmark
   target: 2.5
   floor: 0
   is_relative: false
-limitations: "Demo values only until Parks Properties data is imported."
+limitations: "Uses the current Parks Properties release matched by community-board code and DCP's 2010 community-district population. It is not a current resident count or a measure of park quality, access, or capacity."
