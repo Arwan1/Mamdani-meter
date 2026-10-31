@@ -56,6 +56,7 @@ class ScoreValue(BaseModel):
     raw_value: float | None = None
     unit: str | None = None
     reason: str | None = None
+    reference_period: str | None = None
 
 
 class ScoresResponse(BaseModel):
@@ -175,6 +176,7 @@ class SubmissionClassification(BaseModel):
     severity: int | None = Field(default=None, ge=1, le=5)
     confidence: float | None = Field(default=None, ge=0, le=1)
     safety_flags: SafetyFlags = Field(default_factory=SafetyFlags)
+    related_policy_ids: list[str] = Field(default_factory=list, max_length=3)
     policy_note: str | None = None
 
 
@@ -184,6 +186,41 @@ class SubmissionResponse(BaseModel):
     poll_url: str
     error: str | None = None
     classification: SubmissionClassification | None = None
+
+
+class DistrictInsightDraft(BaseModel):
+    """The model-authored portion of a district interpretation."""
+
+    headline: str = Field(min_length=1, max_length=140)
+    explanation: str = Field(min_length=1, max_length=900)
+    priority_indicator_ids: list[str] = Field(default_factory=list, max_length=3)
+    related_policy_ids: list[str] = Field(default_factory=list, max_length=3)
+
+
+class DistrictEvidence(BaseModel):
+    indicator_id: str
+    name: str
+    score: float | None = Field(default=None, ge=0, le=100)
+    raw_value: float | None = None
+    unit: str | None = None
+    status: ScoreStatus
+    coverage: float = Field(ge=0, le=1)
+
+
+class DistrictInsight(BaseModel):
+    """A cached, source-constrained interpretation read by the UI."""
+
+    geo_id: str
+    node_type: NodeType
+    node_id: str
+    data_version: str
+    headline: str
+    explanation: str
+    priority_indicator_ids: list[str] = Field(default_factory=list)
+    related_policy_ids: list[str] = Field(default_factory=list)
+    evidence: list[DistrictEvidence]
+    caveat: str
+    generated_at: datetime
 
 
 class Commitment(BaseModel):

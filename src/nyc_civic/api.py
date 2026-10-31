@@ -23,6 +23,7 @@ from nyc_civic.schemas import (
     CommitmentList,
     Dataset,
     DatasetList,
+    DistrictInsight,
     Geography,
     GeographyList,
     IndicatorDetails,
@@ -88,6 +89,7 @@ def _score_value(row: dict[str, Any] | None, geo_id: str) -> ScoreValue:
         raw_value=row["raw_value"],
         unit=row["unit"],
         reason=row["reason"],
+        reference_period=row["reference_period"],
     )
 
 
@@ -148,21 +150,37 @@ def _submission_worker(database: Database, settings: Settings, submission_id: st
             if not original.exists():
                 raise ValueError("The uploaded image cannot be found in local storage")
             cleaned_image = sanitize_image(original)
+        approved_commitments = database.commitments()
+        policy_context = [
+            {
+                "id": item["id"],
+                "document_title": item["document_title"],
+                "page": str(item["page"] or "n/a"),
+                "tags": ", ".join(json_load(item["tags_json"])),
+                "summary": item["summary"],
+                "excerpt": item["excerpt"],
+            }
+            for item in approved_commitments
+        ]
         gemini = GeminiService(settings.gemini_api_key, settings.gemini_model_fast)
-        classification = gemini.classify_submission(row["description"], cleaned_image)
+        classification = gemini.classify_submission(
+            row["description"], cleaned_image, policy_context=policy_context
+        )
         # The deterministic template avoids Gemini making a claim of illegality or violation.
         policy_note = None
-        if classification.subcategory:
-            candidates = [
-                item for item in database.commitments() if classification.subcategory in json_load(item["tags_json"])
-            ]
-            if candidates:
-                candidate = candidates[0]
-                policy_note = (
-                    f"This observation may relate to the city's commitment to {candidate['summary']} "
-                    f"({candidate['document_title']}, page {candidate['page']}). "
-                    "It does not by itself establish a violation."
-                )
+        commitments_by_id = {item["id"]: item for item in approved_commitments}
+        selected = [
+            commitments_by_id[identifier]
+            for identifier in classification.related_policy_ids
+            if identifier in commitments_by_id
+        ]
+        if selected:
+            candidate = selected[0]
+            policy_note = (
+                f"This observation may relate to the city's commitment to {candidate['summary']} "
+                f"({candidate['document_title']}, page {candidate['page']}). "
+                "It does not by itself establish a violation."
+            )
         result = classification.model_copy(update={"policy_note": policy_note})
         database.update_submission(
             submission_id, status="classified", classification=result.model_dump(mode="json")
@@ -273,6 +291,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 children=children,
             ),
         )
+
+    @app.get("/api/v1/geographies/{geo_id}/insight", response_model=DistrictInsight, tags=["insights"])
+    def get_district_insight(
+        geo_id: str,
+        response: Response,
+        node_type: str = "subcategory",
+        node_id: str = "public_parks",
+    ) -> DistrictInsight:
+        if database.geography(geo_id) is None:
+            raise HTTPException(status_code=404, detail="Geography not found")
+        version = _versioned(response, database)
+        stored = database.district_insight(geo_id, node_type, node_id, version)
+        if stored is None:
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "No precomputed district interpretation is available. "
+                    "Run `nycp insights generate` after configuring Gemini."
+                ),
+            )
+        return DistrictInsight.model_validate(json_load(stored["payload_json"]))
 
     def measures(geo_id: str, field: str, response: Response) -> MeasureGroupsResponse:
         geography = database.geography(geo_id)

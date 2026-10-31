@@ -5,12 +5,12 @@ from fastapi.testclient import TestClient
 from nyc_civic.api import create_app
 from nyc_civic.config import Settings
 from nyc_civic.db import Database
-from nyc_civic.seed import seed_demo
+from tests.platform_records import load_records
 
 
-def test_demo_scores_follow_contract(tmp_path) -> None:
+def test_scores_follow_contract(tmp_path) -> None:
     settings = Settings(storage_dir=tmp_path, database_path=tmp_path / "platform.sqlite3")
-    seed_demo(Database(settings))
+    load_records(Database(settings))
     client = TestClient(create_app(settings))
     response = client.get(
         "/api/v1/scores",
@@ -19,13 +19,13 @@ def test_demo_scores_follow_contract(tmp_path) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["node"]["node_id"] == "public_parks"
-    assert len(body["values"]) == 3
+    assert len(body["values"]) == 1
     assert response.headers["X-Data-Version"]
 
 
 def test_missing_score_has_explicit_status(tmp_path) -> None:
     settings = Settings(storage_dir=tmp_path, database_path=tmp_path / "platform.sqlite3")
-    seed_demo(Database(settings))
+    load_records(Database(settings))
     client = TestClient(create_app(settings))
     response = client.get(
         "/api/v1/scores",

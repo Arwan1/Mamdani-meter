@@ -9,3 +9,5 @@ data/geo/
 .pytest_cache/
 .pytest-tmp/
 .ruff_cache/
+policy_sources/*
+!policy_sources/README.md

@@ -48,6 +48,17 @@ CREATE TABLE IF NOT EXISTS score_value (
 CREATE INDEX IF NOT EXISTS idx_score_lookup
 ON score_value (node_type, node_id, geo_id);
 
+CREATE TABLE IF NOT EXISTS district_insight (
+    geo_id TEXT NOT NULL REFERENCES geography(geo_id),
+    node_type TEXT NOT NULL,
+    node_id TEXT NOT NULL,
+    data_version TEXT NOT NULL,
+    model_id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    PRIMARY KEY (geo_id, node_type, node_id, data_version)
+);
+
 CREATE TABLE IF NOT EXISTS submission (
     id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL,
@@ -190,6 +201,47 @@ class Database:
                 (node_type, node_id),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def save_district_insight(
+        self,
+        *,
+        geo_id: str,
+        node_type: str,
+        node_id: str,
+        data_version: str,
+        model_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        with self.connect() as connection:
+            connection.execute(
+                """INSERT INTO district_insight(
+                    geo_id, node_type, node_id, data_version, model_id, payload_json, generated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(geo_id, node_type, node_id, data_version) DO UPDATE SET
+                    model_id = excluded.model_id,
+                    payload_json = excluded.payload_json,
+                    generated_at = excluded.generated_at""",
+                (
+                    geo_id,
+                    node_type,
+                    node_id,
+                    data_version,
+                    model_id,
+                    json.dumps(payload),
+                    self.utc_now(),
+                ),
+            )
+
+    def district_insight(
+        self, geo_id: str, node_type: str, node_id: str, data_version: str
+    ) -> dict[str, Any] | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """SELECT payload_json, generated_at FROM district_insight
+                WHERE geo_id = ? AND node_type = ? AND node_id = ? AND data_version = ?""",
+                (geo_id, node_type, node_id, data_version),
+            ).fetchone()
+        return dict(row) if row else None
 
     def create_submission(self, payload: dict[str, Any]) -> str:
         identifier = str(uuid4())

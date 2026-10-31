@@ -1,53 +1,486 @@
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const boroughs=[
-  {key:'Manhattan',prefix:'MN',count:12,poly:[[426,120],[463,92],[494,185],[511,278],[507,350],[483,420],[452,380],[435,291]],label:[461,264]},
-  {key:'The Bronx',prefix:'BX',count:12,poly:[[503,159],[566,130],[640,125],[707,168],[719,213],[673,262],[595,280],[534,246]],label:[628,190]},
-  {key:'Queens',prefix:'QN',count:14,poly:[[527,289],[590,269],[665,281],[722,317],[758,361],[748,416],[708,451],[643,456],[589,429],[539,391]],label:[670,361]},
-  {key:'Brooklyn',prefix:'BK',count:18,poly:[[461,416],[501,392],[548,411],[591,436],[638,466],[627,510],[589,542],[542,550],[498,534],[464,500],[441,458]],label:[536,484]},
-  {key:'Staten Island',prefix:'SI',count:3,poly:[[302,502],[340,480],[382,491],[414,523],[405,559],[368,583],[329,566],[300,536]],label:[354,536]}
-];
-const districtNames={MN:['Lower Manhattan','Greenwich Village','Lower East Side','Chelsea','Midtown','Upper West Side','Upper East Side','Morningside Heights','Central Harlem','East Harlem','Washington Heights','Inwood'],BX:['Mott Haven','Hunts Point','Morrisania','Concourse','Highbridge','Fordham','Belmont','Kingsbridge','Riverdale','Co-op City','Pelham Parkway','Throgs Neck'],BK:['Brooklyn Heights','Fort Greene','Bed-Stuy','Bushwick','East New York','Canarsie','Park Slope','Sunset Park','Crown Heights','Flatbush','Borough Park','Bensonhurst','Coney Island','Bay Ridge','Williamsburg','Brownsville','Flatlands','Sheepshead Bay'],QN:['Astoria','Sunnyside','Jackson Heights','Elmhurst','Ridgewood','Forest Hills','Rego Park','Flushing','Bayside','Fresh Meadows','Jamaica','Queens Village','Rockaway','Far Rockaway'],SI:['North Shore','Mid-Island','South Shore']};
-const measures=['Residents near a park','Park access by transit','Park condition & care','Green space per resident'];
-const metricDescriptions={'Residents near a park':'Share of residents within a 10-minute walk of a public park.','Park access by transit':'Sample transit-access measure. Scheduled-service details will accompany final data.','Park condition & care':'Sample park-condition measure. The source and inspection period will be documented.','Green space per resident':'Sample amount of public green space relative to neighborhood population.'};
-const palettes={'Parks & green space':['#bd2635','#d94b3d','#ee8741','#f5c943','#c3cc54','#3973c7'],'Safe streets':['#bd2635','#d94b3d','#ee8741','#f5c943','#c3cc54','#3973c7'],'Getting around':['#bd2635','#d94b3d','#ee8741','#f5c943','#c3cc54','#3973c7'],'Public spaces':['#bd2635','#d94b3d','#ee8741','#f5c943','#c3cc54','#3973c7']};
-let activePriority='Parks & green space',activeMeasure=measures[0],activeDistrict=null,map=null,mapReady=false,selectedPhoto=null,labelsVisible=true,toastTimer;const districtLayers=new Map();let boroughLabelLayer=null,featureLayerRef=null;
-const startCenter=[-73.94,40.715],startZoom=10.15;
+const $ = selector => document.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
 
-function districtCode(b,i){return `${b.prefix}${String(i+1).padStart(2,'0')}`}
-function districtName(b,i){return districtNames[b.prefix][i]}
-function districtScore(prefix,index){const seed=(index*17+prefix.charCodeAt(0)*7+prefix.charCodeAt(1)*3+activePriority.length*11+activeMeasure.length*5)%91;return 9+seed%86}
-function colorFor(score){return palettes[activePriority][Math.min(5,Math.floor(score/100*6))]}
-function districtData(b,i){const score=districtScore(b.prefix,i);return {code:districtCode(b,i),name:districtName(b,i),borough:b.key,score,pct:Math.round(score*.82+7),prefix:b.prefix,index:i}}
-function toLngLat([x,y]){return [-74.30+(x-280)/500*.66,40.94-(y-80)/530*.50]}
-function tilesFor(b){const minX=Math.min(...b.poly.map(p=>p[0])),maxX=Math.max(...b.poly.map(p=>p[0])),minY=Math.min(...b.poly.map(p=>p[1])),maxY=Math.max(...b.poly.map(p=>p[1]));const w=b.prefix==='SI'?35:34,h=31,sx=w+3,sy=h+3;let all=[],row=0;for(let y=minY;y+h<maxY;y+=sy,row++){for(let x=minX+(row%2?8:0);x+w<maxX;x+=sx){const p=[x+w/2,y+h/2];let inside=false;for(let a=0,z=b.poly.length-1;a<b.poly.length;z=a++){const [xa,ya]=b.poly[a],[xz,yz]=b.poly[z];if(((ya>p[1])!==(yz>p[1]))&&(p[0]<(xz-xa)*(p[1]-ya)/(yz-ya)+xa))inside=!inside}if(inside)all.push({x,y,w,h,cx:x+w/2,cy:y+h/2})}}
-  all.sort((a,c)=>a.cy-c.cy||a.cx-c.cx);if(all.length>b.count){const chosen=[];for(let i=0;i<b.count;i++)chosen.push(all[Math.round(i*(all.length-1)/(b.count-1||1))]);all=chosen}return all.slice(0,b.count)}
-function featureCollection(){const features=[];for(const b of boroughs){const cells=tilesFor(b);cells.forEach((t,i)=>{const d=districtData(b,i);const corners=[[t.x,t.y+4],[t.x+5,t.y],[t.x+t.w-5,t.y],[t.x+t.w,t.y+5],[t.x+t.w,t.y+t.h-5],[t.x+t.w-5,t.y+t.h],[t.x+5,t.y+t.h],[t.x,t.y+t.h-5],[t.x,t.y+4]].map(toLngLat);features.push({type:'Feature',id:d.code,properties:{...d,fill:colorFor(d.score)},geometry:{type:'Polygon',coordinates:[corners]}})})}return {type:'FeatureCollection',features}}
-function boroughLabels(){return {type:'FeatureCollection',features:boroughs.map(b=>({type:'Feature',properties:{name:b.key.toUpperCase()},geometry:{type:'Point',coordinates:toLngLat(b.label)}}))}}
-function mapStyle(feature){const p=feature?.properties||{},selected=activeDistrict?.code===p.code,dimmed=!!p.searchDim;return{color:selected?'#ffe04a':'#ffe05b',weight:selected?4:2,opacity:dimmed ? .18 : .95,fillColor:selected?'#ffe04a':p.fill||'#4b80d2',fillOpacity:dimmed ? .06 : selected ? .52 : .38}}
-function featureLayer(){districtLayers.clear();const layer=L.geoJSON(featureCollection(),{style:mapStyle,onEachFeature:(feature,shape)=>{const p=feature.properties;districtLayers.set(p.code,shape);if(labelsVisible)shape.bindTooltip(`CD ${p.code.slice(2)}`,{permanent:true,direction:'center',className:'district-map-label'});shape.on('mouseover',()=>{$('#selectionName').textContent=`${p.name} · ${p.borough}`;if(activeDistrict?.code!==p.code)shape.setStyle({fillOpacity:.62,weight:2.5})});shape.on('mouseout',()=>{shape.setStyle(mapStyle(feature));if(!activeDistrict)$('#selectionName').textContent='Select a district'});shape.on('click',event=>{const b=boroughs.find(x=>x.prefix===p.prefix);selectDistrict(b,+p.index,event.latlng)})}});return layer}
-function syncLabels(){for(const layer of districtLayers.values()){if(labelsVisible){if(!layer.getTooltip())layer.bindTooltip(`CD ${layer.feature.properties.code.slice(2)}`,{permanent:true,direction:'center',className:'district-map-label'})}else layer.unbindTooltip()}if(map&&boroughLabelLayer){if(labelsVisible)boroughLabelLayer.addTo(map);else map.removeLayer(boroughLabelLayer)}}
-function makeMap(){if(typeof L==='undefined'){showToast('Satellite map library did not load. Check your internet, then refresh.');return}map=L.map('nycMap',{center:[startCenter[1],startCenter[0]],zoom:startZoom,zoomControl:false,minZoom:9,maxZoom:18,maxBounds:[[40.40,-74.38],[41.04,-73.54]],maxBoundsViscosity:.6,scrollWheelZoom:true});let tileErrorNotified=false;L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri, Maxar, Earthstar Geographics, and the GIS User Community'}).on('tileerror',()=>{if(!tileErrorNotified){tileErrorNotified=true;showToast('Satellite imagery did not load. Check your internet connection.')}}).addTo(map);featureLayerRef=featureLayer().addTo(map);boroughLabelLayer=L.layerGroup(boroughs.map(b=>{const point=toLngLat(b.label);return L.marker([point[1],point[0]],{interactive:false,icon:L.divIcon({className:'borough-map-label',html:b.key.toUpperCase(),iconSize:[100,24],iconAnchor:[50,12]})})}));boroughLabelLayer.addTo(map);map.whenReady(()=>{mapReady=true;setTimeout(()=>map.invalidateSize(),120)})}
+const API_BASE = new URLSearchParams(location.search).get("api")
+  || window.MAMDANI_API_BASE
+  || "http://127.0.0.1:8000/api/v1";
+const PARK_ACREAGE_INDICATOR = "public_parks.acreage_per_1000";
+const MAP_CENTER = [40.715, -73.94];
+const MAP_ZOOM = 10.15;
+const SCORE_COLORS = ["#bd2635", "#d94b3d", "#ee8741", "#f5c943", "#c3cc54", "#3973c7"];
 
-function renderMapList(){const list=$('#mapList');list.replaceChildren();for(const b of boroughs)for(let i=0;i<b.count;i++){const d=districtData(b,i),button=document.createElement('button');button.className=activeDistrict?.code===d.code?'selected':'';button.innerHTML=`<b>${d.name}</b>${d.borough} · preview ${d.score}/100`;button.addEventListener('click',()=>{selectDistrict(b,i);$('#viewToggle').click()});list.append(button)}}
-function selectDistrict(b,i,center){const d=districtData(b,i);activeDistrict=d;for(const layer of districtLayers.values())layer.setStyle(mapStyle(layer.feature));if(map&&mapReady){const target=center?[center.lat,center.lng]:[toLngLat(b.label)[1],toLngLat(b.label)[0]];map.flyTo(target,Math.max(map.getZoom(),11.4),{duration:.7})}$('#selectionName').textContent=`${d.name} · CD ${d.code.slice(2)}`;$('#districtInsight .district-placeholder').hidden=true;const detail=$('#districtInsight .district-details');detail.hidden=false;detail.innerHTML=`<div class="district-score">${d.score}<span style="font-size:11px"> /100</span></div><div><span class="section-kicker">${d.borough.toUpperCase()} · COMMUNITY DISTRICT ${d.code.slice(2)}</span><h4>${d.name}</h4><p>Sample neighborhood access preview · ${activeMeasure.toLowerCase()}</p></div><div class="district-metric"><b>${d.pct}%</b><span>residents near a park · sample</span></div><div class="district-metric"><b>3 sources</b><span>planned evidence connections</span></div><button class="icon-button" id="clearDistrict" title="Clear selected district" aria-label="Clear selected district">×</button>`;$('#clearDistrict').addEventListener('click',clearDistrict)}
-function clearDistrict(){activeDistrict=null;for(const layer of districtLayers.values())layer.setStyle(mapStyle(layer.feature));$('#selectionName').textContent='Select a district';$('#districtInsight .district-placeholder').hidden=false;$('#districtInsight .district-details').hidden=true}
-function updateMapData(){$('#mapSubtitle').innerHTML=`${activePriority} <b>·</b> 59 community districts`;$('#legendSource').textContent=activeMeasure==='Residents near a park'?'Share of residents · sample':'Illustrative measure · sample';$('#measureName').textContent=activeMeasure;$('.measure-description').textContent=metricDescriptions[activeMeasure];if(mapReady&&featureLayerRef){map.removeLayer(featureLayerRef);featureLayerRef=featureLayer().addTo(map);syncLabels()}renderMapList();if(activeDistrict){const b=boroughs.find(x=>x.prefix===activeDistrict.prefix);selectDistrict(b,activeDistrict.index)}}
-function showToast(message){const t=$('#toast');t.textContent=message;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2600)}
-function openReport(){const d=$('#reportDrawer');d.classList.add('open');d.setAttribute('aria-hidden','false');$('#drawerBackdrop').classList.add('open');document.body.style.overflow='hidden';setTimeout(()=>$('#reportText').focus(),250)}function closeReport(){const d=$('#reportDrawer');d.classList.remove('open');d.setAttribute('aria-hidden','true');$('#drawerBackdrop').classList.remove('open');document.body.style.overflow=''}
-function appendMessage(text,who='user',imageUrl=null){const thread=$('#chatThread'),message=document.createElement('div');message.className=`chat-message ${who==='user'?'user-message':'assistant-message'}`;if(who!=='user'){const a=document.createElement('span');a.className='assistant-avatar';a.textContent='✦';message.append(a)}const bubble=document.createElement('div');bubble.className='bubble';const p=document.createElement('p');p.textContent=text;bubble.append(p);if(imageUrl){const img=document.createElement('img');img.src=imageUrl;img.alt='Photo attached to your report';img.style.cssText='display:block;width:150px;max-height:120px;object-fit:cover;border-radius:6px;margin-top:8px';bubble.append(img)}if(who==='assistant'&&text.startsWith('POSSIBLE')){const ref=document.createElement('div');ref.className='reference-card';ref.innerHTML='<span class="reference-kicker">SAMPLE REFERENCE · PREVIEW ONLY</span><b>NYC civic priority lookup</b><p>This is a placeholder connection. A specific commitment and source page will appear once reviewed policy records are connected.</p><small>No verified policy match in this demo</small>';bubble.append(ref)}const s=document.createElement('small');s.textContent=who==='user'?'You · local preview':'Report assistant · simulated';bubble.append(s);message.append(bubble);thread.append(message);thread.scrollTop=thread.scrollHeight}
-function responseFor(text,hasPhoto){const q=text.toLowerCase();let topic='Public infrastructure · community observation';if(/sidewalk|ramp|crosswalk|curb|pedestrian/.test(q))topic='Transportation & mobility · pedestrian access';else if(/light|lamp|dark|streetlight/.test(q))topic='Public infrastructure · street lighting';else if(/park|tree|grass|playground|green/.test(q))topic='Public amenities & spaces · parks';else if(/pothole|road|street|traffic/.test(q))topic='Transportation & mobility · street condition';return `POSSIBLE TOPIC: ${topic}\n\n${hasPhoto?'Your image and description':'Your description'} are treated as a resident observation, not a verified finding. I’ve prepared a sample reference card below. The actual source and page will come from reviewed city records when connected.`}
-function setPhoto(file){if(!file)return;if(!file.type.startsWith('image/')){showToast('Please choose an image file.');return}selectedPhoto=file;const r=new FileReader();r.onload=()=>{$('#uploadImage').src=r.result;$('#uploadName').textContent=file.name;$('#uploadPreview').hidden=false};r.readAsDataURL(file)}
+let map;
+let mapReady = false;
+let featureLayerRef;
+let atlasGeojson;
+let activeDistrictId = null;
+let labelsVisible = true;
+let selectedPhoto = null;
+let selectedPosition = null;
+let toastTimer;
+const geographies = new Map();
+const scores = new Map();
+const districtLayers = new Map();
+
+function showToast(message) {
+  const toast = $("#toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3000);
+}
+
+async function request(path, options) {
+  const response = await fetch(`${API_BASE}${path}`, options);
+  if (response.ok) return response.status === 204 ? null : response.json();
+  let detail = `Request failed (${response.status}).`;
+  try {
+    detail = (await response.json()).detail || detail;
+  } catch {
+    // Preserve the HTTP status if an intermediary did not return JSON.
+  }
+  throw new Error(detail);
+}
+
+function colorFor(value) {
+  if (value?.status !== "ok" || typeof value.score !== "number") return "#b7bfcb";
+  return SCORE_COLORS[Math.min(SCORE_COLORS.length - 1, Math.floor(value.score / 100 * SCORE_COLORS.length))];
+}
+
+function districtCode(geoId) {
+  return geoId.replace("cd:", "");
+}
+
+function mapStyle(feature) {
+  const geoId = feature.properties.geo_id;
+  const score = scores.get(geoId);
+  const selected = activeDistrictId === geoId;
+  const dimmed = Boolean(feature.properties.searchDim);
+  return {
+    color: selected ? "#ffe04a" : "#ffffff",
+    weight: selected ? 4 : 1.5,
+    opacity: dimmed ? 0.18 : 0.95,
+    fillColor: selected ? "#ffe04a" : colorFor(score),
+    fillOpacity: dimmed ? 0.06 : selected ? 0.55 : 0.48,
+  };
+}
+
+function featureLayer() {
+  districtLayers.clear();
+  return L.geoJSON(atlasGeojson, {
+    style: mapStyle,
+    onEachFeature(feature, layer) {
+      const geoId = feature.properties.geo_id;
+      districtLayers.set(geoId, layer);
+      const geography = geographies.get(geoId);
+      if (labelsVisible) bindDistrictLabel(layer, geoId);
+      layer.on("mouseover", () => {
+        $("#selectionName").textContent = geography
+          ? `${geography.name} · ${geography.borough}`
+          : `CD ${districtCode(geoId)}`;
+        if (activeDistrictId !== geoId) layer.setStyle({ fillOpacity: 0.65, weight: 2.5 });
+      });
+      layer.on("mouseout", () => {
+        layer.setStyle(mapStyle(feature));
+        if (!activeDistrictId) $("#selectionName").textContent = "Select a district";
+      });
+      layer.on("click", event => selectDistrict(geoId, event.latlng));
+    },
+  });
+}
+
+function bindDistrictLabel(layer, geoId) {
+  layer.bindTooltip(`CD ${districtCode(geoId)}`, {
+    permanent: true,
+    direction: "center",
+    className: "district-map-label",
+  });
+}
+
+function refreshLayerStyles() {
+  for (const layer of districtLayers.values()) layer.setStyle(mapStyle(layer.feature));
+}
+
+function syncLabels() {
+  for (const [geoId, layer] of districtLayers) {
+    if (labelsVisible && !layer.getTooltip()) bindDistrictLabel(layer, geoId);
+    if (!labelsVisible) layer.unbindTooltip();
+  }
+}
+
+function makeMap() {
+  if (typeof L === "undefined") {
+    showToast("The map library did not load. Check your internet connection, then refresh.");
+    return;
+  }
+  map = L.map("nycMap", {
+    center: MAP_CENTER,
+    zoom: MAP_ZOOM,
+    zoomControl: false,
+    minZoom: 9,
+    maxZoom: 18,
+    maxBounds: [[40.40, -74.38], [41.04, -73.54]],
+    maxBoundsViscosity: 0.6,
+    scrollWheelZoom: true,
+  });
+  let tileErrorNotified = false;
+  L.tileLayer(
+    "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    { maxZoom: 19, attribution: "Tiles © Esri, Maxar, Earthstar Geographics, and the GIS User Community" },
+  ).on("tileerror", () => {
+    if (!tileErrorNotified) {
+      tileErrorNotified = true;
+      showToast("Satellite imagery did not load. Check your internet connection.");
+    }
+  }).addTo(map);
+  map.whenReady(() => {
+    mapReady = true;
+    setTimeout(() => map.invalidateSize(), 120);
+  });
+}
+
+function scoreLabel(score) {
+  return score?.status === "ok" && typeof score.score === "number"
+    ? `${Math.round(score.score)}/100`
+    : "Unavailable";
+}
+
+function rawValueLabel(score) {
+  return typeof score?.raw_value === "number"
+    ? `${score.raw_value.toFixed(2)} acres per 1,000 residents`
+    : "Unavailable";
+}
+
+function renderMapList() {
+  const list = $("#mapList");
+  list.replaceChildren();
+  for (const geography of [...geographies.values()].sort((a, b) => a.name.localeCompare(b.name))) {
+    const score = scores.get(geography.geo_id);
+    const button = document.createElement("button");
+    if (activeDistrictId === geography.geo_id) button.classList.add("selected");
+    const title = document.createElement("b");
+    title.textContent = geography.name;
+    button.append(title, document.createTextNode(`${geography.borough} · ${scoreLabel(score)}`));
+    button.addEventListener("click", () => {
+      selectDistrict(geography.geo_id);
+      $("#viewToggle").click();
+    });
+    list.append(button);
+  }
+}
+
+async function selectDistrict(geoId, center) {
+  const geography = geographies.get(geoId);
+  if (!geography) return;
+  activeDistrictId = geoId;
+  refreshLayerStyles();
+  renderMapList();
+  if (map && mapReady) {
+    if (center) map.flyTo([center.lat, center.lng], Math.max(map.getZoom(), 11.4), { duration: 0.7 });
+    else {
+      const bounds = districtLayers.get(geoId)?.getBounds();
+      if (bounds) map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 11.4), { duration: 0.7 });
+    }
+  }
+  $("#selectionName").textContent = `${geography.name} · CD ${districtCode(geoId)}`;
+  $("#districtInsight .district-placeholder").hidden = true;
+  const detail = $("#districtInsight .district-details");
+  const score = scores.get(geoId);
+  detail.hidden = false;
+  detail.innerHTML = `
+    <div class="district-score">${score?.status === "ok" ? Math.round(score.score) : "—"}<span style="font-size:11px"> /100</span></div>
+    <div><span class="section-kicker">${geography.borough.toUpperCase()} · COMMUNITY DISTRICT ${districtCode(geoId)}</span><h4>${geography.name}</h4><p id="districtNarrative">${rawValueLabel(score)} · ${score?.reference_period || "Reference period unavailable"}</p></div>
+    <div class="district-metric"><b>${rawValueLabel(score)}</b><span>public park acreage measure</span></div>
+    <div class="district-metric"><b>${score?.coverage === 1 ? "Available" : "Unavailable"}</b><span>measure coverage</span></div>
+    <button class="icon-button" id="clearDistrict" title="Clear selected district" aria-label="Clear selected district">×</button>`;
+  $("#clearDistrict").addEventListener("click", clearDistrict);
+  await addInsightNarrative(geoId);
+}
+
+async function addInsightNarrative(geoId) {
+  try {
+    const insight = await request(
+      `/geographies/${encodeURIComponent(geoId)}/insight?node_type=indicator&node_id=${PARK_ACREAGE_INDICATOR}`,
+    );
+    if (activeDistrictId !== geoId) return;
+    const narrative = $("#districtNarrative");
+    if (narrative) narrative.textContent = `${insight.headline}: ${insight.explanation}`;
+  } catch {
+    // Gemini interpretations are optional; the measured value remains useful without one.
+  }
+}
+
+function clearDistrict() {
+  activeDistrictId = null;
+  refreshLayerStyles();
+  renderMapList();
+  $("#selectionName").textContent = "Select a district";
+  $("#districtInsight .district-placeholder").hidden = false;
+  $("#districtInsight .district-details").hidden = true;
+}
+
+async function loadAtlas() {
+  try {
+    const [geographyResponse, geometry, scoreResponse] = await Promise.all([
+      request("/geographies?level=cd"),
+      request("/geo/cd.geojson"),
+      request(`/scores?level=cd&node_type=indicator&node_id=${PARK_ACREAGE_INDICATOR}`),
+    ]);
+    for (const item of geographyResponse.items) geographies.set(item.geo_id, item);
+    for (const item of scoreResponse.values) scores.set(item.geo_id, item);
+    if (!Array.isArray(geometry.features) || !geometry.features.length) {
+      throw new Error("The local API has no community-district geometry. Run `nycp data sync`.");
+    }
+    atlasGeojson = geometry;
+    if (featureLayerRef) map.removeLayer(featureLayerRef);
+    featureLayerRef = featureLayer().addTo(map);
+    map.fitBounds(featureLayerRef.getBounds(), { padding: [18, 18] });
+    $("#mapSubtitle").innerHTML = `Parks &amp; green space <b>·</b> ${geographies.size} community districts`;
+    renderMapList();
+  } catch (error) {
+    showToast(`${error.message} Start the local API and reload this page.`);
+    $("#selectionName").textContent = "Local data unavailable";
+  }
+}
+
+function openReport() {
+  const drawer = $("#reportDrawer");
+  drawer.classList.add("open");
+  drawer.setAttribute("aria-hidden", "false");
+  $("#drawerBackdrop").classList.add("open");
+  document.body.style.overflow = "hidden";
+  setTimeout(() => $("#reportText").focus(), 250);
+}
+
+function closeReport() {
+  const drawer = $("#reportDrawer");
+  drawer.classList.remove("open");
+  drawer.setAttribute("aria-hidden", "true");
+  $("#drawerBackdrop").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+function appendMessage(text, who = "user", imageUrl = null) {
+  const thread = $("#chatThread");
+  const message = document.createElement("div");
+  message.className = `chat-message ${who === "user" ? "user-message" : "assistant-message"}`;
+  if (who !== "user") {
+    const avatar = document.createElement("span");
+    avatar.className = "assistant-avatar";
+    avatar.textContent = "✦";
+    message.append(avatar);
+  }
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  const paragraph = document.createElement("p");
+  paragraph.textContent = text;
+  bubble.append(paragraph);
+  if (imageUrl) {
+    const image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = "Photo attached to your report";
+    image.style.cssText = "display:block;width:150px;max-height:120px;object-fit:cover;border-radius:6px;margin-top:8px";
+    bubble.append(image);
+  }
+  const label = document.createElement("small");
+  label.textContent = who === "user" ? "You · local submission" : "Report assistant";
+  bubble.append(label);
+  message.append(bubble);
+  thread.append(message);
+  thread.scrollTop = thread.scrollHeight;
+  return message;
+}
+
+function setPhoto(file) {
+  if (!file) return;
+  if (!new Set(["image/jpeg", "image/png", "image/webp"]).has(file.type)) {
+    showToast("Choose a JPEG, PNG, or WebP image.");
+    return;
+  }
+  selectedPhoto = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    $("#uploadImage").src = reader.result;
+    $("#uploadName").textContent = file.name;
+    $("#uploadPreview").hidden = false;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadPhoto(file) {
+  const upload = await request("/uploads/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: file.name, content_type: file.type, size_bytes: file.size }),
+  });
+  const response = await fetch(upload.upload_url, {
+    method: upload.method,
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  if (!response.ok) throw new Error("The photo could not be saved locally.");
+  return upload.key;
+}
+
+async function pollSubmission(pollUrl) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const response = await fetch(`${new URL(API_BASE).origin}${pollUrl}`);
+    if (!response.ok) throw new Error("The submission status could not be read.");
+    const body = await response.json();
+    if (body.status !== "processing") return body;
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  throw new Error("Classification is taking longer than expected. Check the local API log.");
+}
+
+function submissionMessage(result) {
+  if (result.status === "failed") return result.error || "Classification could not be completed.";
+  const classification = result.classification;
+  if (!classification) return "The local service accepted the observation.";
+  const parts = [classification.summary || "The observation was classified locally."];
+  if (classification.domain) parts.push(`Topic: ${classification.domain.replaceAll("_", " ")}.`);
+  if (classification.policy_note) parts.push(classification.policy_note);
+  return parts.join(" ");
+}
+
+function bindPageEvents() {
+  $$("[data-scroll]").forEach(button => button.addEventListener("click", () => {
+    document.getElementById(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
+  $$("[data-open-report]").forEach(button => button.addEventListener("click", openReport));
+  $("#reportFab").addEventListener("click", openReport);
+  $("#closeDrawer").addEventListener("click", closeReport);
+  $("#drawerBackdrop").addEventListener("click", closeReport);
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeReport();
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      $("#search").focus();
+    }
+  });
+  $$(".priority").forEach(button => button.addEventListener("click", () => {
+    showToast("Public parks is the currently available local data slice.");
+  }));
+  $("#viewToggle").addEventListener("click", () => {
+    const list = $("#mapList");
+    const show = list.hidden;
+    list.hidden = !show;
+    $("#nycMap").style.visibility = show ? "hidden" : "visible";
+    if (!show && map) map.invalidateSize();
+    $$("#viewToggle span").forEach(span => {
+      span.classList.toggle("toggle-active", (span.dataset.view === "list") === show);
+    });
+  });
+  $("#labelsToggle").addEventListener("click", () => {
+    labelsVisible = !labelsVisible;
+    syncLabels();
+  });
+  $("#zoomIn").addEventListener("click", () => map?.zoomIn(1, { animate: true }));
+  $("#zoomOut").addEventListener("click", () => map?.zoomOut(1, { animate: true }));
+  $("#locate").addEventListener("click", () => {
+    if (!navigator.geolocation) return showToast("Location is not available in this browser.");
+    navigator.geolocation.getCurrentPosition(
+      position => map?.flyTo([position.coords.latitude, position.coords.longitude], 13),
+      () => showToast("Location permission was not granted."),
+      { timeout: 7000 },
+    );
+  });
+  $("#resetMap").addEventListener("click", () => {
+    if (featureLayerRef) map?.fitBounds(featureLayerRef.getBounds(), { padding: [18, 18] });
+    $("#search").value = "";
+    for (const layer of districtLayers.values()) layer.feature.properties.searchDim = false;
+    clearDistrict();
+    showToast("Map view reset.");
+  });
+  $("#shareButton").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(location.href.split("#")[0]);
+      showToast("Map link copied to clipboard.");
+    } catch {
+      showToast("Share this page using your browser address bar.");
+    }
+  });
+  $$("[data-toast]").forEach(button => button.addEventListener("click", () => showToast(button.dataset.toast)));
+  $("#search").addEventListener("input", event => {
+    const query = event.target.value.trim().toLowerCase();
+    for (const layer of districtLayers.values()) {
+      const geography = geographies.get(layer.feature.properties.geo_id);
+      const haystack = `${geography?.name || ""} ${geography?.borough || ""} ${districtCode(layer.feature.properties.geo_id)}`.toLowerCase();
+      layer.feature.properties.searchDim = Boolean(query) && !haystack.includes(query);
+    }
+    refreshLayerStyles();
+  });
+  $(".mobile-menu").addEventListener("click", () => $("#explore").scrollIntoView({ behavior: "smooth" }));
+  $(".avatar").addEventListener("click", () => showToast("No account is required for the local service."));
+  $("#photoInput").addEventListener("change", event => setPhoto(event.target.files?.[0]));
+  $("#removeUpload").addEventListener("click", () => {
+    selectedPhoto = null;
+    $("#photoInput").value = "";
+    $("#uploadPreview").hidden = true;
+  });
+  $("#locationButton").addEventListener("click", () => {
+    if (!navigator.geolocation) return showToast("Location is not available in this browser.");
+    $("#locationButton").textContent = "Requesting…";
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        selectedPosition = { lat: position.coords.latitude, lng: position.coords.longitude };
+        $("#locationButton").textContent = "Location added";
+        showToast("Location added to this local submission.");
+      },
+      () => {
+        $("#locationButton").textContent = "Add location";
+        showToast("Location permission was not granted.");
+      },
+      { timeout: 7000 },
+    );
+  });
+  $("#reportText").addEventListener("input", event => {
+    $("#charCount").textContent = `${event.target.value.length} / 500`;
+  });
+  $$("[data-starter]").forEach(button => button.addEventListener("click", () => {
+    $("#reportText").value = button.dataset.starter;
+    $("#charCount").textContent = `${button.dataset.starter.length} / 500`;
+    $("#reportText").focus();
+  }));
+  $("#chatForm").addEventListener("submit", submitReport);
+}
+
+async function submitReport(event) {
+  event.preventDefault();
+  const text = $("#reportText").value.trim();
+  if (text.length < 3) return showToast("Add a description of at least three characters.");
+  if (!selectedPosition) return showToast("Add a location before submitting the observation.");
+  const photo = selectedPhoto;
+  const imageUrl = photo ? $("#uploadImage").src : null;
+  appendMessage(text, "user", imageUrl);
+  $("#reportText").value = "";
+  $("#charCount").textContent = "0 / 500";
+  $("#uploadPreview").hidden = true;
+  $("#photoInput").value = "";
+  selectedPhoto = null;
+  const waiting = appendMessage("Saving the observation and requesting local classification…", "assistant");
+  try {
+    const photoKeys = photo ? [await uploadPhoto(photo)] : [];
+    const submitted = await request("/submissions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        description: text,
+        photo_keys: photoKeys,
+        lat: selectedPosition.lat,
+        lng: selectedPosition.lng,
+        observed_at: new Date().toISOString(),
+      }),
+    });
+    const result = await pollSubmission(submitted.poll_url);
+    waiting.remove();
+    appendMessage(submissionMessage(result), "assistant");
+  } catch (error) {
+    waiting.remove();
+    appendMessage(`The observation could not be submitted: ${error.message}`, "assistant");
+  }
+}
 
 makeMap();
-$$('[data-scroll]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.scroll)?.scrollIntoView({behavior:'smooth',block:'start'})));
-$$('[data-open-report]').forEach(b=>b.addEventListener('click',openReport));$('#reportFab').addEventListener('click',openReport);$('#closeDrawer').addEventListener('click',closeReport);$('#drawerBackdrop').addEventListener('click',closeReport);document.addEventListener('keydown',e=>{if(e.key==='Escape')closeReport();if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('#search').focus()}});
-$$('.nav-link').forEach(b=>b.addEventListener('click',()=>{$$('.nav-link').forEach(n=>n.classList.remove('active'));b.classList.add('active')}));
-$$('.priority').forEach(b=>b.addEventListener('click',()=>{$$('.priority').forEach(x=>x.classList.remove('active'));b.classList.add('active');activePriority=b.dataset.metric;updateMapData()}));
-$('#measureSelect').addEventListener('click',()=>{const menu=$('#measureMenu'),open=menu.hidden;menu.hidden=!open;$('#measureSelect').setAttribute('aria-expanded',String(open))});$$('#measureMenu button').forEach(b=>b.addEventListener('click',()=>{activeMeasure=b.dataset.measure;$('#measureMenu').hidden=true;$('#measureSelect').setAttribute('aria-expanded','false');updateMapData()}));
-$('#viewToggle').addEventListener('click',()=>{const list=$('#mapList'),show=list.hidden;list.hidden=!show;$('#nycMap').style.visibility=show?'hidden':'visible';if(!show&&map)map.invalidateSize();$$('#viewToggle span').forEach(s=>s.classList.toggle('toggle-active',(s.dataset.view==='list')===show))});$('#labelsToggle').addEventListener('click',()=>{labelsVisible=!labelsVisible;syncLabels();$('#labelsToggle').classList.toggle('active',!labelsVisible)});
-$('#zoomIn').addEventListener('click',()=>map?.zoomIn(1,{animate:true}));$('#zoomOut').addEventListener('click',()=>map?.zoomOut(1,{animate:true}));$('#locate').addEventListener('click',()=>{if(!navigator.geolocation){showToast('Location is not available in this browser.');return}showToast('Requesting your location…');navigator.geolocation.getCurrentPosition(p=>map?.flyTo([p.coords.latitude,p.coords.longitude],13),()=>showToast('Location permission was not granted.'),{timeout:7000})});$('#resetMap').addEventListener('click',()=>{map?.flyTo([startCenter[1],startCenter[0]],startZoom,{duration:.5});clearDistrict();$('#search').value='';if(mapReady)for(const layer of districtLayers.values()){layer.feature.properties.searchDim=false;layer.setStyle(mapStyle(layer.feature))}showToast('Map view reset.')});
-$('#shareButton').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(location.href.split('#')[0]);showToast('Map link copied to clipboard.')}catch{showToast('Share this page using your browser address bar.')}});$$('[data-toast]').forEach(b=>b.addEventListener('click',()=>showToast(b.dataset.toast)));
-$('#search').addEventListener('input',e=>{const q=e.target.value.trim().toLowerCase();if(mapReady)for(const layer of districtLayers.values()){const p=layer.feature.properties;p.searchDim=!!q&&!`${p.name} ${p.borough} ${p.code}`.toLowerCase().includes(q);layer.setStyle(mapStyle(layer.feature))}if(q){const b=boroughs.find(x=>districtNames[x.prefix].some(n=>n.toLowerCase().includes(q))||x.key.toLowerCase().includes(q));if(b){const i=districtNames[b.prefix].findIndex(n=>n.toLowerCase().includes(q));if(i>=0){const d=districtData(b,i);$('#selectionName').textContent=`${d.name} · CD ${d.code.slice(2)}`}}}});
-$('.mobile-menu').addEventListener('click',()=>{showToast('Explore the map or open User report.');$('#explore').scrollIntoView({behavior:'smooth'})});$('.avatar').addEventListener('click',()=>showToast('This preview does not require an account.'));
-$('#photoInput').addEventListener('change',e=>setPhoto(e.target.files?.[0]));$('#removeUpload').addEventListener('click',()=>{selectedPhoto=null;$('#photoInput').value='';$('#uploadPreview').hidden=true});$('#locationButton').addEventListener('click',()=>{if(!navigator.geolocation){showToast('Location is not available.');return}$('#locationButton').textContent='Requesting…';navigator.geolocation.getCurrentPosition(p=>{$('#locationButton').textContent=`Location added (${p.coords.latitude.toFixed(3)}, ${p.coords.longitude.toFixed(3)})`;showToast('Location added to this local draft.')},()=>{$('#locationButton').textContent='Add location';showToast('Location permission was not granted.')},{timeout:7000})});
-$('#reportText').addEventListener('input',e=>$('#charCount').textContent=`${e.target.value.length} / 500`);$$('[data-starter]').forEach(b=>b.addEventListener('click',()=>{$('#reportText').value=b.dataset.starter;$('#charCount').textContent=`${b.dataset.starter.length} / 500`;$('#reportText').focus()}));$('#chatForm').addEventListener('submit',e=>{e.preventDefault();const text=$('#reportText').value.trim();if(!text&&!selectedPhoto){showToast('Add a description or photo to start.');return}appendMessage(text||'I attached a photo of something I noticed.','user',selectedPhoto?$('#uploadImage').src:null);const hasPhoto=!!selectedPhoto;$('#reportText').value='';$('#charCount').textContent='0 / 500';selectedPhoto=null;$('#photoInput').value='';$('#uploadPreview').hidden=true;const wait=document.createElement('div');wait.className='chat-message assistant-message';wait.id='thinking';wait.innerHTML='<span class="assistant-avatar">✦</span><div class="bubble"><p>Looking for a possible civic topic…</p><small>Simulated preview</small></div>';$('#chatThread').append(wait);$('#chatThread').scrollTop=$('#chatThread').scrollHeight;setTimeout(()=>{wait.remove();appendMessage(responseFor(text,hasPhoto),'assistant')},800)});
+bindPageEvents();
+if (map) loadAtlas();

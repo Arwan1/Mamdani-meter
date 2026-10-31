@@ -7,11 +7,11 @@ direction: higher_better
 unit: percent
 formula: "sum(population within a 10 minute walk) / total population * 100"
 geo_unit: cd
-datasets: [parks_properties, census_pl_2020]
-reference_period: "demo 2026"
+datasets: [parks_properties, nyc_population_by_cd_2010]
+reference_period: "Unavailable until a local routed-walking analysis is imported"
 normalization:
   method: target
   target: 100
   floor: 0
   is_relative: false
-limitations: "Demo values only until routing outputs are imported."
+limitations: "No value is reported until a documented local walking-network and population-allocation analysis is available; unavailable locations are not assigned a zero."
