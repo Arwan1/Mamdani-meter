@@ -1,30 +1,53 @@
-# Mamdani Metre — NYC Civic Atlas UI
+# Mamdani Metre — NYC Civic Atlas
 
-A locally hosted, dependency-free interface prototype for the NYC Civic Priorities & Evidence Platform.
+The locally hosted website reads priorities, district records, scores, district
+context, and report classifications from the companion FastAPI backend in the
+parent project. The browser contains no generated district scores or shapes.
 
-## Open the site
+## Start the app on Windows
 
-For the most reliable view, run:
+Use two PowerShell windows, both opened in the project folder.
+
+**Window 1 — backend**, from `HaverHack 2`:
+
+```powershell
+uv run nycp demo seed
+uv run nycp serve
+```
+
+Seed the demo data once, or again when you intentionally want to reset the
+demo results. The API listens at `http://127.0.0.1:8000`.
+
+**Window 2 — website**, from `HaverHack 2\NYC Civic Atlas Website`:
 
 ```powershell
 node server.js
 ```
 
-Then open <http://127.0.0.1:4173>. You can also double-click `index.html`; the controls run without a server. Satellite imagery, map library, and fonts require an internet connection.
+Open <http://127.0.0.1:4173>. Leave both windows running while using the site.
+Refresh the page after starting the API. Directly opening `index.html` does not
+work for API calls because the browser needs the local website server origin.
 
-## Map setup
+## Connected features
 
-The preview uses Leaflet for a familiar, dependable slippy map and Esri World Imagery for the satellite tiles. The Esri attribution is kept visible on the map. The map layer and scores remain illustrative placeholders until the reviewed NYC geography and indicator files are provided.
+- Priorities and measures come from `/api/v1/taxonomy`.
+- District records come from `/api/v1/geographies?level=cd` and scores from
+  `/api/v1/scores`.
+- Community-district shapes come from `/api/v1/geo/cd.geojson`. The backend
+  currently returns an empty shape collection until NYC boundaries are
+  imported, so the satellite map stays visible and the list shows the real
+  district records in the API.
+- Selecting a district loads its score tree, context, and infrastructure.
+- User reports require an NYC location. Photos are uploaded using the local
+  presign-and-PUT flow, then submissions are polled for classification.
+- Reports, uploaded images, and the database remain in the backend's local
+  `data/` folder. Reports are not sent to the City. If Gemini is not configured,
+  the backend may return a normal `failed` classification status.
 
-For a production build with many large data-driven polygon layers, MapLibre GL JS is a strong open-source renderer. MapTiler Satellite Hybrid can supply imagery and place labels, but requires a provider account/key and plan. Current MapTiler pricing and usage limits should be reviewed before deployment.
+The UI's default API address is in `api-config.js`. The backend CORS defaults
+include the website's `127.0.0.1:4173` and `localhost:4173` origins.
 
-## Prototype behavior and limitations
-
-- Pan and zoom the NYC satellite view; click a sample district to open its details.
-- Choose a civic priority and measure, search districts, toggle labels, or switch to a district list.
-- Open **User report** to attach an image, write a description, and receive a simulated topic suggestion with a clearly marked placeholder reference.
-- Location is requested only when you press **Add location**.
-- District shapes, scores, names, and report replies are illustrative. They are not official NYC boundaries, measurements, policy matches, or submitted reports.
-- Report photos stay in the local browser preview and are not uploaded.
-
-Low sample scores use red to flag more concern; yellow marks the middle of the scale; blue marks better conditions. The legend states this directly.
+Satellite imagery uses Esri World Imagery tiles via Leaflet and requires an
+internet connection. Red means more problems or less access, yellow shows the
+middle of the score range, blue means better conditions or more access, and
+gray means evidence is unavailable.

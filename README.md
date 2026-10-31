@@ -25,6 +25,14 @@ being developed. That is a local process, not a hosted backend. If the UI is
 later deployed publicly, this design will need an intentional hosted-service
 and privacy review; it should not be exposed directly from a laptop.
 
+## Start the local website
+
+After completing the setup below, open two PowerShell windows in this folder.
+In the first, run `uv run nycp demo seed` once, then `uv run nycp serve`. In the
+second, change to `NYC Civic Atlas Website` and run `node server.js`. Open
+`http://127.0.0.1:4173`. Keep both windows running; the UI gets its map data and
+report processing from the local API.
+
 ## One-time setup (Windows PowerShell)
 
 The present Python 3.14 installation is missing `pip` and cannot create a

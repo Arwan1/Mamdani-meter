@@ -20,3 +20,29 @@ body{background:var(--page);color:var(--ink)}
 .leaflet-container{font-family:var(--font);background:#203e67}.leaflet-control-attribution{color:#fff!important;background:#102b69e8!important;border:1px solid #f2d04c;border-radius:4px 0 0 0;font-size:9px!important}.leaflet-control-attribution a{color:#ffe36a!important}.leaflet-tooltip.district-map-label{background:#102b69de;border:1px solid #ffdf4d;border-radius:3px;color:#fff7cf;font-size:8px;font-weight:800;padding:1px 4px;box-shadow:0 2px 5px #091e4440}.leaflet-tooltip.district-map-label:before{display:none}.borough-map-label{color:#fff1a5;text-shadow:-1px -1px 2px #091d49,1px 1px 3px #091d49,0 0 8px #091d49;font:800 12px var(--display);letter-spacing:1.4px;text-align:center;white-space:nowrap;pointer-events:none}leaflet-control-zoom{border:1px solid #f1d34a!important;box-shadow:0 4px 15px #101f3f40!important}.leaflet-control-zoom a{color:#173b82!important;background:#fff!important}.leaflet-control-zoom a:hover{background:#fff5c7!important}
 
 .gradient-bar{background:linear-gradient(90deg,#bd2635 0%,#df593e 22%,#f0a443 42%,#f5d04b 56%,#b6ca56 75%,#3973c7 100%)}.legend-captions span:first-child{color:#b42d38;font-weight:700}.legend-captions span:last-child{color:#2c5eae;font-weight:700}
+.api-empty-state { margin: 10px 4px; color: #77839a; font-size: 10px; line-height: 1.55; }
+.priority-list { max-height: 380px; overflow: auto; scrollbar-width: thin; }
+.priority { min-height: 51px; }
+.priority.active { box-shadow: inset 3px 0 #e2bd22; }
+.priority-icon { color: #28549d !important; background: #edf3fd !important; }
+.priority-arrow { color: #a18a31; }
+.measure-select:disabled { color: #78849a; background: #f8f9fb; cursor: default; }
+.top-actions[data-state="offline"] .live-dot { background: #d74a53; box-shadow: 0 0 0 3px #ffeaeb; }
+.top-actions[data-state="connecting"] .live-dot { background: #d8b531; box-shadow: 0 0 0 3px #fff5cf; }
+.map-data-notice { position: absolute; z-index: 3; left: 50%; top: 50%; transform: translate(-50%,-50%); width: min(440px,82%); padding: 13px 16px; border: 1px solid #eed44c; border-radius: 8px; background: #102a68e8; color: #fff; text-align: center; font-size: 11px; line-height: 1.6; box-shadow: 0 8px 28px #0d1f4247; pointer-events: none; }
+.map-data-notice[hidden] { display: none; }
+.map-list-empty { grid-column: 1 / -1; padding: 22px; color: #657696; font-size: 12px; }
+.district-error { flex-basis: 100%; color: #b8323f; font-size: 10px; }
+.reference-card { margin-top: 10px; padding: 10px; border: 1px solid #d9e3f1; border-radius: 7px; background: #f5f8fd; }
+.reference-kicker { display: block; color: #415f93; font-size: 8px; font-weight: 800; letter-spacing: .9px; }
+.reference-card p { font-size: 10px; line-height: 1.55; }
+.reference-card small { font-size: 8px; color: #75829a; }
+.send-button:disabled { opacity: .6; cursor: wait; }
+.legend-captions { gap: 8px; }
+.legend-captions span { white-space: nowrap; }
+.legend-captions span:first-child { color: #c62938; font-weight: 700; }
+.legend-captions span:nth-child(2) { color: #927713; font-weight: 700; }
+.legend-captions span:last-child { color: #285fae; font-weight: 700; }
+@media (max-width: 720px) {
+  .legend-captions { flex-wrap: wrap; justify-content: flex-start; gap: 4px 10px; }
+}
