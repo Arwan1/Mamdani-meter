@@ -1,0 +1,7 @@
+slug: census_pl_2020
+name: 2020 Census P.L. 94-171 population
+publisher: U.S. Census Bureau
+url: https://www.census.gov/programs-surveys/decennial-census/about/rdo/summary-files.html
+format: CSV
+access_method: manual_import
+limitations: "Population blocks are a 2020 baseline and do not represent current population."

@@ -1,0 +1,15 @@
+dimensions:
+  - slug: equity
+    name: Equity
+  - slug: accessibility
+    name: Accessibility
+  - slug: quality
+    name: Quality
+  - slug: safety
+    name: Safety
+  - slug: sustainability
+    name: Sustainability
+  - slug: availability
+    name: Availability
+  - slug: reliability
+    name: Reliability

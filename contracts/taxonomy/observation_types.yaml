@@ -1,0 +1,7 @@
+observation_types:
+  - sidewalk_obstruction
+  - pothole
+  - streetlight_out
+  - park_maintenance
+  - illegal_dumping
+  - other

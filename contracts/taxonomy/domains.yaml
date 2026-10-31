@@ -1,0 +1,32 @@
+domains:
+  - slug: transportation_mobility
+    name: Transportation & Mobility
+    ordinal: 1
+    subcategories: []
+  - slug: public_amenities_spaces
+    name: Public Amenities & Spaces
+    ordinal: 2
+    subcategories:
+      - slug: public_parks
+        name: Public Parks
+        ordinal: 1
+  - slug: public_infrastructure
+    name: Public Infrastructure
+    ordinal: 3
+    subcategories: []
+  - slug: environment
+    name: Environment
+    ordinal: 4
+    subcategories: []
+  - slug: housing_land_use
+    name: Housing & Land Use
+    ordinal: 5
+    subcategories: []
+  - slug: public_safety
+    name: Public Safety
+    ordinal: 6
+    subcategories: []
+  - slug: municipal_services
+    name: Municipal Services
+    ordinal: 7
+    subcategories: []

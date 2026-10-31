@@ -1,0 +1,17 @@
+id: public_parks.acreage_per_1000
+name: Public park acreage per 1,000 residents
+subcategory: public_parks
+dimensions: [availability, equity]
+mode: null
+direction: higher_better
+unit: acres_per_1000_residents
+formula: "public park acres / population * 1000"
+geo_unit: cd
+datasets: [parks_properties, census_pl_2020]
+reference_period: "demo 2026"
+normalization:
+  method: benchmark
+  target: 2.5
+  floor: 0
+  is_relative: false
+limitations: "Demo values only until Parks Properties data is imported."

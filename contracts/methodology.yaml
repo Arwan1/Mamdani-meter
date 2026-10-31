@@ -1,0 +1,10 @@
+minimum_coverage: 0.6
+default_weight: 1.0
+citywide_methods:
+  - district_mean
+  - population_weighted
+normalization:
+  target: "Maps a value linearly between a floor and target to 0–100."
+  benchmark: "Same formula as target, with a documented external benchmark."
+  relative: "Percentile rank among residential community districts only."
+  descriptive: "Kept as context; deliberately not scored."

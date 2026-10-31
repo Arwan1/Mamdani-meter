@@ -1,0 +1,17 @@
+id: public_parks.walk_access_10min
+name: Residents within a 10-minute walk of a park
+subcategory: public_parks
+dimensions: [accessibility, equity]
+mode: walk
+direction: higher_better
+unit: percent
+formula: "sum(population within a 10 minute walk) / total population * 100"
+geo_unit: cd
+datasets: [parks_properties, census_pl_2020]
+reference_period: "demo 2026"
+normalization:
+  method: target
+  target: 100
+  floor: 0
+  is_relative: false
+limitations: "Demo values only until routing outputs are imported."

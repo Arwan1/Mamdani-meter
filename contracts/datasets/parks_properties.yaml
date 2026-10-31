@@ -1,0 +1,7 @@
+slug: parks_properties
+name: NYC Parks Properties
+publisher: NYC Parks
+url: https://data.cityofnewyork.us/
+format: GeoJSON
+access_method: manual_import
+limitations: "Field definitions and public-access filters must be reviewed before scoring."
