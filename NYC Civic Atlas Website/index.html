@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f5f7fb" />
+  <title>Mamdani Metre — NYC Civic Atlas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Mamdani Metre home">
+      <span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 3.5 36 12.7v14.6L20 36.5 4 27.3V12.7L20 3.5Z"/><path d="M12 27V13l8 9 8-9v14"/></svg></span>
+      <span class="brand-name">Mamdani <span>Metre</span><small>NEW YORK CITY · CIVIC ATLAS</small></span>
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+      <button class="nav-link active" data-scroll="explore">Explore</button>
+      <button class="nav-link" data-scroll="methodology">How it works</button>
+      <button class="nav-link" data-open-report>Share an observation <span class="nav-plus">+</span></button>
+    </nav>
+    <div class="top-actions"><span class="live-dot"></span><span>Preview environment</span><button class="avatar" title="Profile menu" aria-label="Profile menu">NY</button></div>
+    <button class="mobile-menu" aria-label="Open menu">☰</button>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-label="Welcome to Mamdani Metre">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-line"></span> OUR CITY, MEASURED</div>
+        <h1>New York deserves<br><em>a closer look.</em></h1>
+        <p>Explore neighborhood conditions, civic priorities, and the evidence behind them—across all five boroughs.</p>
+        <button class="primary-button hero-cta" data-scroll="explore">Explore the city <span>↓</span></button>
+      </div>
+      <div class="hero-art">
+        <img src="assets/heroic-nyc-sunset.png" alt="Mamdani depicted as a New York superhero above the city skyline" />
+        <div class="hero-art-label"><span class="sunset-dot"></span> BUILT FOR NEW YORK</div>
+      </div>
+    </section>
+
+    <section class="intro-strip" id="explore">
+      <div class="intro-title"><span class="section-kicker">MAMDANI METRE · NYC</span><h2>One city. Every block.</h2></div>
+      <p class="intro-description">Explore the satellite map, compare neighborhood measures, and open a district to see its story.</p>
+      <div class="intro-stats"><div><strong>59</strong><span>community districts</span></div><i></i><div><strong>5</strong><span>boroughs</span></div><span class="sample-tag">INTERACTIVE PREVIEW</span></div>
+    </section>
+
+    <section class="atlas-layout" aria-label="Interactive Mamdani Metre NYC atlas">
+      <aside class="explore-panel panel">
+        <div class="panel-heading"><div><span class="section-kicker">EXPLORE A PRIORITY</span><h3>What matters to you?</h3></div><button class="icon-button" title="About priorities" aria-label="About priorities" data-toast="Choose a topic to explore its neighborhood preview.">i</button></div>
+        <label class="search-box"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.8" cy="8.8" r="5.8"/><path d="m13.2 13.2 4 4"/></svg><input id="search" type="search" placeholder="Search a neighborhood" autocomplete="off"><kbd>Ctrl K</kbd></label>
+        <div class="priority-list" role="listbox" aria-label="Civic priorities">
+          <button class="priority active" data-metric="Parks & green space"><span class="priority-icon green">✳</span><span><b>Parks & green space</b><small>Access · quality · care</small></span><span class="priority-arrow">↗</span></button>
+          <button class="priority" data-metric="Safe streets"><span class="priority-icon coral">⌁</span><span><b>Safe streets</b><small>Crossings · traffic · comfort</small></span><span class="priority-arrow">↗</span></button>
+          <button class="priority" data-metric="Getting around"><span class="priority-icon blue">↗</span><span><b>Getting around</b><small>Mobility · access · transit</small></span><span class="priority-arrow">↗</span></button>
+          <button class="priority" data-metric="Public spaces"><span class="priority-icon violet">⌂</span><span><b>Public spaces</b><small>Facilities · upkeep · welcome</small></span><span class="priority-arrow">↗</span></button>
+        </div>
+        <div class="measure-block"><div class="measure-head"><span class="section-kicker">MEASURE</span><span class="preview-pill">SAMPLE DATA</span></div><button class="measure-select" id="measureSelect" aria-expanded="false"><span id="measureName">Residents near a park</span><span class="select-chevron">⌄</span></button><div class="measure-menu" id="measureMenu" hidden><button data-measure="Residents near a park">Residents near a park</button><button data-measure="Park access by transit">Park access by transit</button><button data-measure="Park condition & care">Park condition & care</button><button data-measure="Green space per resident">Green space per resident</button></div><p class="measure-description">Share of residents within a 10-minute walk of a public park.</p></div>
+        <div class="panel-footnote"><span class="info-ring">i</span><p><b>Preview values</b> illustrate how the atlas will work. Final measures will be connected to reviewed data and methodology.</p></div>
+      </aside>
+
+      <section class="map-panel panel" aria-label="New York City map">
+        <div class="map-toolbar"><div class="map-title"><span class="map-pin">⌖</span><div><h3>New York City</h3><span id="mapSubtitle">Parks & green space <b>·</b> 59 community districts</span></div></div><div class="map-toolbar-actions"><button class="view-toggle" id="viewToggle" title="Switch map and list view"><span class="toggle-active" data-view="map">Map</span><span data-view="list">List</span></button><button class="icon-button label-toggle" id="labelsToggle" title="Toggle district labels" aria-label="Toggle district labels">Aa</button><button class="icon-button" title="Share this view" aria-label="Share this view" id="shareButton"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="15" cy="4" r="2.3"/><circle cx="5" cy="10" r="2.3"/><circle cx="15" cy="16" r="2.3"/><path d="m7.1 8.9 5.8-3.8M7.1 11.1l5.8 3.8"/></svg></button><button class="icon-button" title="Reset map" aria-label="Reset map" id="resetMap"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8a7 7 0 1 1-.2 3M3 4v4h4"/><path d="M10 6v4l3 2"/></svg></button></div></div>
+        <div class="map-canvas" id="mapCanvas">
+          <div class="map-context">NEW YORK CITY <span>·</span> SATELLITE VIEW <span>·</span> SAMPLE OVERLAY</div>
+          <div id="nycMap" class="nyc-map" role="application" aria-label="Interactive satellite map of New York City"></div>
+          <div class="map-zoom"><button id="zoomIn" aria-label="Zoom in">+</button><button id="zoomOut" aria-label="Zoom out">−</button><span></span><button id="locate" aria-label="Center map">⌖</button></div>
+          <div class="map-selection" id="mapSelection"><span class="selection-dot"></span><span id="selectionName">Select a district</span><span class="selection-hint">Click a district</span></div>
+          <div class="map-key"><span class="key-symbol">▦</span> Community district <span class="key-line"></span> Borough boundary</div>
+          <div class="map-list" id="mapList" hidden></div>
+        </div>
+        <div class="map-footer"><div class="legend-copy"><div class="legend-label"><span>LOWER SCORE → HIGHER SCORE</span><span id="legendSource">Share of residents · sample</span></div><div class="legend-scale"><span>0</span><div class="gradient-bar"></div><span>100</span></div><div class="legend-captions"><span>Red · more problems / less access</span><span>Blue · better conditions / more access</span></div></div><div class="legend-status"><span class="status-swatch"></span><span>Evidence unavailable</span><button class="tooltip-button" title="Missing evidence is not scored as zero." data-toast="Areas without reliable evidence are shown separately, not as zero.">?</button></div></div>
+      </section>
+
+    </section>
+
+    <section class="district-insight panel" id="districtInsight"><div class="district-placeholder"><span class="placeholder-icon">⌖</span><div><span class="section-kicker">YOUR CITY, UP CLOSE</span><h3>Select a community district on the map</h3><p>Explore sample neighborhood context, evidence coverage, and related civic priorities.</p></div><span class="district-hint">59 districts across all 5 boroughs</span></div><div class="district-details" hidden></div></section>
+
+    <section class="methodology" id="methodology"><div><span class="section-kicker">EVIDENCE WITH CONTEXT</span><h2>Every number has a story.</h2><p>Mamdani Metre connects civic priorities with neighborhood evidence. Measures will show their sources, definitions, and limitations—so you can explore what the data says, and what it can’t.</p></div><div class="methodology-points"><div><span>01</span><b>Trace the source</b><small>Follow a measure back to its data and definition.</small></div><div><span>02</span><b>See the uncertainty</b><small>Understand missing data, coverage, and limits.</small></div><div><span>03</span><b>Add what you see</b><small>Share observations as a separate layer of evidence.</small></div></div></section>
+  </main>
+  <footer class="footer"><span class="brand-mini">MAMDANI <b>METRE</b></span><span>An interactive civic evidence preview for New York City</span><span>Built for every borough <i>✳</i></span></footer>
+
+  <button class="report-fab" id="reportFab" aria-label="Open User report"><span>✦</span><span class="fab-label">User report</span><span class="fab-plus">+</span></button>
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="report-drawer" id="reportDrawer" aria-label="User report chat" aria-hidden="true">
+    <div class="drawer-header"><div><span class="drawer-kicker"><span class="online-dot"></span> MAMDANI METRE · REPORT ASSISTANT</span><h2>Tell us what you’re seeing.</h2></div><button class="drawer-close" id="closeDrawer" aria-label="Close report panel">×</button></div>
+    <div class="drawer-note"><span>✦</span><p>Share a photo and a few details. This preview will suggest a civic topic and show a <b>sample reference</b>. Reports aren’t verified automatically.</p></div>
+    <div class="chat-thread" id="chatThread"><div class="chat-date">TODAY · PREVIEW</div><div class="chat-message assistant-message"><span class="assistant-avatar">✦</span><div class="bubble"><p>Hi! I can help connect what you notice to a city priority. What’s happening in your neighborhood?</p><small>Report assistant</small></div></div></div>
+    <div class="upload-preview" id="uploadPreview" hidden><img id="uploadImage" alt="Selected report attachment"><div><b id="uploadName"></b><span>Image attached · preview only</span></div><button id="removeUpload" aria-label="Remove image">×</button></div>
+    <div class="chat-suggestions"><span>TRY A STARTER</span><button data-starter="A sidewalk ramp is blocked near my home.">♧ <span>Blocked sidewalk</span></button><button data-starter="The streetlight on my block has been out for several nights.">☼ <span>Streetlight out</span></button></div>
+    <form class="chat-composer" id="chatForm"><div class="composer-tools"><label class="attach-button" title="Attach a photo"><input id="photoInput" type="file" accept="image/*" hidden><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13.5V3m0 0L6.5 6.5M10 3l3.5 3.5"/><path d="M4 11v4.5A1.5 1.5 0 0 0 5.5 17h9a1.5 1.5 0 0 0 1.5-1.5V11"/></svg></label><span>Photo optional</span><span class="composer-count" id="charCount">0 / 500</span></div><textarea id="reportText" maxlength="500" rows="3" placeholder="Describe what you noticed…" aria-label="Describe what you noticed"></textarea><div class="composer-bottom"><span>📍 <button type="button" id="locationButton">Add location</button></span><button class="send-button" type="submit" aria-label="Send report" title="Send report">↑</button></div></form>
+    <div class="drawer-footer"><span>🔒</span> Your photo stays in this local demo. No report is sent to the city.</div>
+  </aside>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
