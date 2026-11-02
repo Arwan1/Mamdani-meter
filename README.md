@@ -116,10 +116,3 @@ uv run pytest
 community-district geometry snapshot, `data/uploads/` contains report images,
 and `data/policy/` holds ingested source documents. They are ignored by Git.
 Back up the SQLite file while the API is stopped.
-
-## Current limitation
-
-Public park acreage per 1,000 residents is source-labeled, but it is not a
-measure of walking access, park quality, capacity, or current population. The
-10-minute walking-access indicator is intentionally `unavailable` until a
-documented local walking-network and population-allocation pipeline is added.
